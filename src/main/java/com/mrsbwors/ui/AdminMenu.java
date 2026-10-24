@@ -1,7 +1,7 @@
-package com.scc.ui;
+package com.mrsbwors.ui;
 
-import com.scc.dao.UserDao;
-import com.scc.model.User;
+import com.mrsbwors.dao.UserDao;
+import com.mrsbwors.model.User;
 import java.util.Scanner;
 
 public class AdminMenu {
