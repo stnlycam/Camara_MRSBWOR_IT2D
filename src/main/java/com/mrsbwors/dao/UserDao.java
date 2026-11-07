@@ -8,16 +8,16 @@ import java.util.List;
 
 public class UserDao {
 
+    private final ActivityLogDao logDao = new ActivityLogDao();
+
     public UserDao(){
         try(Connection conn = DatabaseConnection.getConnection();
             Statement stmt = conn.createStatement()){
-
             defaultAdminGenerator(conn);
         }catch(SQLException e){
             System.err.println("Error seeding default admin: " + e.getMessage());
         }
     }
-
 
     public void defaultAdminGenerator(Connection conn){
         String checkSql = "SELECT COUNT(*) FROM users WHERE roles = 'ADMIN'";
@@ -35,7 +35,6 @@ public class UserDao {
     }
 
     public boolean registerUser(String username, String password, String role) {
-
         String sql = "INSERT INTO users(username, password, roles, status) VALUES(?, ?, ?, 'PENDING')";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -53,9 +52,9 @@ public class UserDao {
             return false;
         }
     }
-    public User login(String username, String password) {
 
-        String sql = "Select id, username, password, roles, status FROM users WHERE username = ? AND password = ?";
+    public User login(String username, String password) {
+        String sql = "SELECT id, username, password, roles, status FROM users WHERE username = ? AND password = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -79,8 +78,6 @@ public class UserDao {
                     );
                 } else {
                     System.out.println("--> Invalid username or password");
-
-
                 }
             }
         } catch (SQLException e) {
@@ -88,6 +85,7 @@ public class UserDao {
         }
         return null;
     }
+
     public List<User> getAllUser() {
         List<User> usersList = new ArrayList<>();
         String sql = "SELECT id, username, password, roles, status FROM users";
@@ -112,15 +110,13 @@ public class UserDao {
         return usersList;
     }
 
-
-
     public List<User> getPendingUser(){
         List<User> pendingList = new ArrayList<>();
         String sql = "SELECT * FROM users WHERE status = 'PENDING' ";
 
-        try(Connection conn = DatabaseConnection.getConnection()){
+        try(Connection conn = DatabaseConnection.getConnection();
             Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql);
+            ResultSet rs = stmt.executeQuery(sql)){
 
             while(rs.next()){
                 pendingList.add(new User(
@@ -128,17 +124,16 @@ public class UserDao {
                         rs.getString("username"),
                         rs.getString("password"),
                         rs.getString("roles"),
-                        rs.getString("Status")
+                        rs.getString("status")
                 ));
             }
         }catch (SQLException e){
             System.out.println("Error fetching users: "+e.getMessage());
         }
         return pendingList;
-
     }
 
-    public boolean approveUser(int userId){
+    public boolean approveUser(int adminId, int userId){
         String sql = "UPDATE users SET status = 'APPROVED' WHERE id = ?";
 
         try(Connection conn = DatabaseConnection.getConnection();
@@ -148,44 +143,52 @@ public class UserDao {
             int rowsUpdated = pstmt.executeUpdate();
 
             if(rowsUpdated > 0 ){
-                System.out.println("-> User ID:" +userId+"approved successfully!");
+                System.out.println("-> User ID:" + userId + " approved successfully!");
+                // Trigger 2: Account Management Logging
+                logDao.logAction(adminId, "USER_APPROVED", "Admin ID " + adminId + " approved account for User ID " + userId);
                 return true;
             }else{
                 System.out.println("-> ID not found");
             }
 
         }catch (Exception e){
-            System.err.println("Error approving users:  " +e.getMessage());
+            System.err.println("Error approving users: " + e.getMessage());
         }
         return false;
-
     }
-    public boolean updateUserAndStatus (int userId, String newRoles, String newStatus ) {
 
+    public boolean updateUserAndStatus(int adminId, int userId, String newRoles, String newStatus) {
         String sql = "UPDATE users SET roles = ?, status = ? WHERE id = ?";
 
-        try (
-                Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, newRoles.toUpperCase());
-            pstmt.setString(2, newStatus.toLowerCase());
+            pstmt.setString(2, newStatus.toUpperCase());
             pstmt.setInt(3, userId);
 
             int rowsUpdated = pstmt.executeUpdate();
             if (rowsUpdated > 0) {
                 System.out.println(" -> User ID: " + userId + " updated successfully!");
+                // Trigger 2: Account Management Logging
+                logDao.logAction(adminId, "USER_UPDATED", "Admin ID " + adminId + " updated User ID " + userId + " to Role: " + newRoles + ", Status: " + newStatus);
                 return true;
-
             } else {
                 System.out.println(" -> User ID not found.");
             }
-            return false;
         } catch (SQLException e) {
             System.err.println("Error updating user: " + e.getMessage());
         }
         return false;
     }
 
+    // Trigger 3: Core Business Process Logging
+    public boolean logRepairBooking(int userId, String serviceDetails) {
+        return logDao.logAction(userId, "REPAIR_BOOKED", "User ID " + userId + " booked repair service: " + serviceDetails);
+    }
 
+    // Trigger 4: Lifecycle / State Change Logging
+    public boolean updateWorkOrderStatus(int userId, int workOrderId, String oldStatus, String newStatus) {
+        return logDao.logAction(userId, "STATUS_UPDATED", "Updated Ticket #" + workOrderId + " status from " + oldStatus + " to " + newStatus);
+    }
 }
