@@ -1,8 +1,10 @@
 package com.mrsbwors.ui;
 
 import com.mrsbwors.dao.ActivityLogDao;
+import com.mrsbwors.dao.ServiceDao;
 import com.mrsbwors.dao.UserDao;
 import com.mrsbwors.model.ActivityLog;
+import com.mrsbwors.model.Booking;
 import com.mrsbwors.model.User;
 
 import java.util.List;
@@ -11,11 +13,13 @@ import java.util.Scanner;
 public class AdminMenu {
     private final UserDao userDao;
     private final ActivityLogDao logDao;
+    private final ServiceDao serviceDao;
     private final Scanner scanner;
 
     public AdminMenu(UserDao userDao, Scanner scanner) {
         this.userDao = userDao;
         this.logDao = new ActivityLogDao();
+        this.serviceDao = new ServiceDao();
         this.scanner = scanner;
     }
 
@@ -24,7 +28,7 @@ public class AdminMenu {
         while (loggedIn) {
             System.out.println("\n=================================");
             System.out.println("       ADMIN DASHBOARD       ");
-            System.out.println("===================================");
+            System.out.println("=================================");
             System.out.println("1. View All Users");
             System.out.println("2. View Pending User Approvals");
             System.out.println("3. Approve User Registration");
@@ -32,18 +36,22 @@ public class AdminMenu {
             System.out.println("5. Update User Role / Status");
             System.out.println("6. Delete User Accounts");
             System.out.println("7. View System Audit Logs");
-            System.out.println("8. Logout");
-            System.out.print("Choose an option (1-7): ");
+            System.out.println("8. View Bookings");
+            System.out.println("9. Logout");
+            System.out.print("Choose an option (1-9): ");
 
             String choice = scanner.nextLine().trim();
 
-            switch (choice){
+            switch (choice) {
                 case "1" -> viewAllUser();
                 case "2" -> viewPendingUsers();
                 case "3" -> approveUser(admin);
+                case "4" -> addNewUser(admin);
                 case "5" -> updateUser(admin);
+                case "6" -> deleteUser(admin);
                 case "7" -> viewAuditLogsMenu();
-                case "8" -> {
+                case "8" -> viewAllBookings(admin);
+                case "9" -> {
                     System.out.println("Logging out...");
                     loggedIn = false;
                 }
@@ -52,9 +60,9 @@ public class AdminMenu {
         }
     }
 
-    private void displayUserTable(List<User> users, String title){
-        System.out.println("\n==================== " + title + " ====================");
-        if(users.isEmpty()){
+    private void displayUserTable(List<User> users, String title) {
+        System.out.println("\n=============== " + title + " ================");
+        if (users.isEmpty()) {
             System.out.println("-> No Records Found");
             return;
         }
@@ -62,37 +70,37 @@ public class AdminMenu {
         System.out.println("+-----+-----------------+------------+------------+");
         System.out.printf("| %-3s | %-15s | %-10s | %-10s |\n", "ID", "Username", "Role", "Status");
         System.out.println("+-----+-----------------+------------+------------+");
-        for(User u : users){
+        for (User u : users) {
             System.out.printf("| %-3s | %-15s | %-10s | %-10s |\n",
                     u.id(), u.username(), u.roles(), u.status());
         }
         System.out.println("+-----+-----------------+------------+------------+");
     }
 
-    private void viewAllUser(){
+    private void viewAllUser() {
         displayUserTable(userDao.getAllUser(), "ALL REGISTERED USER");
     }
 
-    private void viewPendingUsers(){
+    private void viewPendingUsers() {
         displayUserTable(userDao.getPendingUser(), "PENDING APPROVALS");
     }
 
-    private void approveUser(User admin){
+    private void approveUser(User admin) {
         List<User> pendingUsers = userDao.getPendingUser();
         displayUserTable(pendingUsers, "PENDING APPROVALS");
 
-        if (pendingUsers.isEmpty()){
+        if (pendingUsers.isEmpty()) {
             return;
         }
 
         int userId = readIntInput("Enter User ID to Approve (or 0 to cancel): ");
-        if (userId == 0){
+        if (userId == 0) {
             System.out.println(" -> Operation Cancelled by the user.");
             return;
         }
 
         boolean exists = pendingUsers.stream().anyMatch(u -> u.id() == userId);
-        if(!exists){
+        if (!exists) {
             System.out.println(" -> [ERROR] User ID not found");
             return;
         }
@@ -100,32 +108,54 @@ public class AdminMenu {
         userDao.approveUser(admin.id(), userId);
     }
 
-    private void updateUser(User currentAdmin){
-        List<User> users = userDao.getAllUser();
-        displayUserTable(users, "SELECT USER TO UPDATE");
+    private void addNewUser(User admin) {
+        System.out.print("Enter new username: ");
+        String username = scanner.nextLine().trim();
+        System.out.print("Enter password: ");
+        String password = scanner.nextLine().trim();
 
-        if(users.isEmpty()){
-            return;
-        }
-
-        int userId = readIntInput("Enter selected ID to update (or 0 to cancel): ");
-        if(userId == 0){
+        String role = readValidRole();
+        if (role == null) {
             System.out.println(" -> Operation Cancelled.");
             return;
         }
 
-        if(userId == currentAdmin.id()){
+        String status = readValidStatus();
+        if (status == null) {
+            System.out.println(" -> Operation Cancelled.");
+            return;
+        }
+
+        userDao.addUserByAdmin(admin.id(), username, password, role, status);
+    }
+
+    private void updateUser(User currentAdmin) {
+        List<User> users = userDao.getAllUser();
+        displayUserTable(users, "SELECT USER TO UPDATE");
+
+        if (users.isEmpty()) {
+            return;
+        }
+
+        int userId = readIntInput("Enter selected ID to update (or 0 to cancel): ");
+        if (userId == 0) {
+            System.out.println(" -> Operation Cancelled.");
+            return;
+        }
+
+        if (userId == currentAdmin.id()) {
             System.out.println(" -> [WARNING] Modifying current active Admin is restricted");
+            return;
         }
 
         String newRole = readValidRole();
-        if(newRole == null){
+        if (newRole == null) {
             System.out.println(" -> Operation Cancelled.");
             return;
         }
 
         String newStatus = readValidStatus();
-        if(newStatus == null){
+        if (newStatus == null) {
             System.out.println(" -> Operation Cancelled.");
             return;
         }
@@ -133,11 +163,33 @@ public class AdminMenu {
         userDao.updateUserAndStatus(currentAdmin.id(), userId, newRole, newStatus);
     }
 
+    private void deleteUser(User currentAdmin) {
+        List<User> users = userDao.getAllUser();
+        displayUserTable(users, "SELECT USER TO DELETE");
+
+        if (users.isEmpty()) {
+            return;
+        }
+
+        int userId = readIntInput("Enter User ID to delete (or 0 to cancel): ");
+        if (userId == 0) {
+            System.out.println(" -> Operation Cancelled.");
+            return;
+        }
+
+        if (userId == currentAdmin.id()) {
+            System.out.println(" -> [WARNING] Cannot delete currently logged-in Admin.");
+            return;
+        }
+
+        userDao.deleteUser(currentAdmin.id(), userId);
+    }
+
     private void viewAuditLogsMenu() {
         while (true) {
             System.out.println("\n=================================");
             System.out.println("      SYSTEM AUDIT LOGS      ");
-            System.out.println("===================================");
+            System.out.println("==================================");
             System.out.println("1. View All System Logs");
             System.out.println("2. Filter Logs by User ID");
             System.out.println("3. Back to Admin Dashboard");
@@ -150,16 +202,45 @@ public class AdminMenu {
                     int targetUserId = readIntInput("Enter User ID to filter logs: ");
                     displayAuditLogsTable(logDao.getLogsByUserId(targetUserId), "AUDIT LOGS FOR USER ID: " + targetUserId);
                 }
-                case "3" -> { return; }
+                case "3" -> {
+                    return;
+                }
                 default -> System.out.println("-> [ERROR] Invalid Option.");
             }
         }
     }
 
+    private void viewAllBookings(User admin) {
+        List<Booking> bookings = serviceDao.getAllBookings();
+        System.out.println("\n=================================================================================");
+        System.out.println(" ALL SERVICE BOOKINGS");
+        System.out.println("=================================================================================");
+        if (bookings.isEmpty()) {
+            System.out.println("-> No Bookings Found.");
+            return;
+        }
+
+        System.out.println("+-----+-------------+----------+------------+----------------------+------------+");
+        System.out.printf("| %-3s | %-11s | %-8s | %-10s | %-20s | %-10s |\n",
+                "ID", "Customer ID", "Moto ID", "Date", "Service Type", "Status");
+        System.out.println("+-----+-------------+----------+------------+----------------------+------------+");
+        for (Booking b : bookings) {
+            System.out.printf("| %-3s | %-11s | %-8s | %-10s | %-20s | %-10s |\n",
+                    b.id(), b.customerId(), b.motorcycleId(), b.bookingDate(), b.serviceType(), b.status());
+        }
+        System.out.println("+-----+-------------+----------+------------+----------------------+------------+");
+
+        int bookingId = readIntInput("Enter Booking ID to delete (or 0 to go back): ");
+        if (bookingId == 0) {
+            return;
+        }
+        serviceDao.deleteBooking(admin.id(), bookingId);
+    }
+
     private void displayAuditLogsTable(List<ActivityLog> logs, String title) {
         System.out.println("\n==================================================================================================");
         System.out.println(" " + title);
-        System.out.println("==================================================================================================");
+        System.out.println("=================================================================================================");
         if (logs.isEmpty()) {
             System.out.println("-> No Audit Logs Found.");
             return;
@@ -170,19 +251,19 @@ public class AdminMenu {
         System.out.println("+-------+----------+--------------------+-------------------------------------+----------------------+");
         for (ActivityLog log : logs) {
             System.out.printf("| %-5s | %-8s | %-18s | %-35s | %-20s |\n",
-                    log.id(), log.userId(), log.activity(), log.description(), log.timestamp());
+                    log.id(), log.userId(), log.action_type(), log.description(), log.timestamp());
         }
         System.out.println("+-------+----------+--------------------+-------------------------------------+----------------------+");
     }
 
-    private String readValidRole(){
-        while(true){
+    private String readValidRole() {
+        while (true) {
             System.out.print("Enter Role (CUSTOMER/MECHANIC/ADMIN) [0 to cancel]: ");
             String role = scanner.nextLine().trim().toUpperCase();
-            if(role.equals("0") || role.equals("CANCEL")){
+            if (role.equals("0") || role.equals("CANCEL")) {
                 return null;
             }
-            if(role.equals("CUSTOMER") || role.equals("MECHANIC") || role.equals("ADMIN")){
+            if (role.equals("CUSTOMER") || role.equals("MECHANIC") || role.equals("ADMIN")) {
                 return role;
             }
             System.out.println(" -> [ERROR] Invalid Role.");

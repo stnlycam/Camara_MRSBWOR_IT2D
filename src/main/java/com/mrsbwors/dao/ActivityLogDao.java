@@ -8,14 +8,14 @@ import java.util.List;
 
 public class ActivityLogDao {
 
-    public boolean logAction(int userId, String activity, String description) {
-        String sql = "INSERT INTO activity_logs (user_id, activity, description) VALUES (?, ?, ?)";
+    public boolean logAction(int userId, String action_type, String description) {
+        String sql = "INSERT INTO activity_logs (user_id, action_type, description) VALUES (?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setInt(1, userId);
-            pstmt.setString(2, activity);
+            pstmt.setString(2, action_type);
             pstmt.setString(3, description);
             pstmt.executeUpdate();
             return true;
@@ -27,7 +27,7 @@ public class ActivityLogDao {
 
     public List<ActivityLog> getAllLogs() {
         List<ActivityLog> logs = new ArrayList<>();
-        String sql = "SELECT id, user_id, activity, description, timestamp FROM activity_logs ORDER BY timestamp DESC";
+        String sql = "SELECT id, user_id, action_type, description, timestamp FROM activity_logs ORDER BY timestamp DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
@@ -37,7 +37,7 @@ public class ActivityLogDao {
                 logs.add(new ActivityLog(
                         rs.getInt("id"),
                         rs.getInt("user_id"),
-                        rs.getString("activity"),
+                        rs.getString("action_type"),
                         rs.getString("description"),
                         rs.getString("timestamp")
                 ));
@@ -50,7 +50,7 @@ public class ActivityLogDao {
 
     public List<ActivityLog> getLogsByUserId(int userId) {
         List<ActivityLog> logs = new ArrayList<>();
-        String sql = "SELECT id, user_id, activity, description, timestamp FROM activity_logs WHERE user_id = ? ORDER BY timestamp DESC";
+        String sql = "SELECT id, user_id, action_type, description, timestamp FROM activity_logs WHERE user_id = ? ORDER BY timestamp DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -61,7 +61,7 @@ public class ActivityLogDao {
                     logs.add(new ActivityLog(
                             rs.getInt("id"),
                             rs.getInt("user_id"),
-                            rs.getString("activity"),
+                            rs.getString("action_type"),
                             rs.getString("description"),
                             rs.getString("timestamp")
                     ));
