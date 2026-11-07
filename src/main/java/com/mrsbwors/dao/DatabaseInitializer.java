@@ -23,7 +23,7 @@ public class DatabaseInitializer {
         String createLogTable = "CREATE TABLE IF NOT EXISTS activity_logs (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "user_id INTEGER, " +
-                "activity TEXT NOT NULL, " +
+                "action_type TEXT NOT NULL, " +
                 "description TEXT NOT NULL, " +
                 "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, " +
                 "FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE)";

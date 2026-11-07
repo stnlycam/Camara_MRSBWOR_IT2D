@@ -22,7 +22,7 @@ public class Authentication {
         while (running) {
             System.out.println("\n==========================================================");
             System.out.println(" Motorcycle Repair Service Booking and Work Order System ");
-            System.out.println("============================================================");
+            System.out.println("==========================================================");
             System.out.println("1. Login");
             System.out.println("2. Register");
             System.out.println("3. Exit");

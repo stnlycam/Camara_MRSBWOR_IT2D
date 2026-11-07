@@ -24,7 +24,7 @@ public class AdminMenu {
         while (loggedIn) {
             System.out.println("\n=================================");
             System.out.println("       ADMIN DASHBOARD       ");
-            System.out.println("===================================");
+            System.out.println("=================================");
             System.out.println("1. View All Users");
             System.out.println("2. View Pending User Approvals");
             System.out.println("3. Approve User Registration");
@@ -53,7 +53,7 @@ public class AdminMenu {
     }
 
     private void displayUserTable(List<User> users, String title){
-        System.out.println("\n==================== " + title + " ====================");
+        System.out.println("\n=============== " + title + " ================");
         if(users.isEmpty()){
             System.out.println("-> No Records Found");
             return;
@@ -137,7 +137,7 @@ public class AdminMenu {
         while (true) {
             System.out.println("\n=================================");
             System.out.println("      SYSTEM AUDIT LOGS      ");
-            System.out.println("===================================");
+            System.out.println("==================================");
             System.out.println("1. View All System Logs");
             System.out.println("2. Filter Logs by User ID");
             System.out.println("3. Back to Admin Dashboard");
@@ -159,7 +159,7 @@ public class AdminMenu {
     private void displayAuditLogsTable(List<ActivityLog> logs, String title) {
         System.out.println("\n==================================================================================================");
         System.out.println(" " + title);
-        System.out.println("==================================================================================================");
+        System.out.println("=================================================================================================");
         if (logs.isEmpty()) {
             System.out.println("-> No Audit Logs Found.");
             return;
@@ -170,7 +170,7 @@ public class AdminMenu {
         System.out.println("+-------+----------+--------------------+-------------------------------------+----------------------+");
         for (ActivityLog log : logs) {
             System.out.printf("| %-5s | %-8s | %-18s | %-35s | %-20s |\n",
-                    log.id(), log.userId(), log.activity(), log.description(), log.timestamp());
+                    log.id(), log.userId(), log.action_type(), log.description(), log.timestamp());
         }
         System.out.println("+-------+----------+--------------------+-------------------------------------+----------------------+");
     }
