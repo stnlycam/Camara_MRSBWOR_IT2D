@@ -8,11 +8,10 @@ import java.util.Scanner;
 
 public class Main {
 
-<<<<<<< HEAD
-=======
 
 
->>>>>>> origin/master
+
+
     public static void main(String[] args) {
 
         DatabaseInitializer.initialize();

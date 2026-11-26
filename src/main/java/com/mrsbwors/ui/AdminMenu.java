@@ -60,15 +60,9 @@ public class AdminMenu {
         }
     }
 
-<<<<<<< HEAD
     private void displayUserTable(List<User> users, String title) {
         System.out.println("\n=============== " + title + " ================");
         if (users.isEmpty()) {
-=======
-    private void displayUserTable(List<User> users, String title){
-        System.out.println("\n=============== " + title + " ================");
-        if(users.isEmpty()){
->>>>>>> origin/master
             System.out.println("-> No Records Found");
             return;
         }
